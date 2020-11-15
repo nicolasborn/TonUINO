@@ -1,6 +1,6 @@
 #include <DFMiniMp3.h>
 #include <EEPROM.h>
-#include <JC_Button.h>
+#include "Analog_Button.h"
 #include <MFRC522.h>
 #include <SPI.h>
 #include <SoftwareSerial.h>
@@ -638,34 +638,28 @@ byte blockAddr = 4;
 byte trailerBlock = 7;
 MFRC522::StatusCode status;
 
-#define buttonPause A0
-#define buttonUp A1
-#define buttonDown A2
+#define oneButtonPin A0
 #define busyPin 4
 #define shutdownPin 7
 #define openAnalogPin A7
 
-#ifdef FIVEBUTTONS
-#define buttonFourPin A3
-#define buttonFivePin A4
-#endif
-
 #define LONG_PRESS 1000
 
-Button pauseButton(buttonPause);
-Button upButton(buttonUp);
-Button downButton(buttonDown);
-#ifdef FIVEBUTTONS
-Button buttonFour(buttonFourPin);
-Button buttonFive(buttonFivePin);
-#endif
+AnalogButton pauseButton(9);
+AnalogButton upButton(11);
+AnalogButton downButton(10);
+AnalogButton button1(1);
+AnalogButton button2(2);
+AnalogButton button3(3);
+AnalogButton button4(4);
+AnalogButton button5(5);
+AnalogButton button6(6);
+AnalogButton button7(7);
+AnalogButton button8(8);
+
 bool ignorePauseButton = false;
 bool ignoreUpButton = false;
 bool ignoreDownButton = false;
-#ifdef FIVEBUTTONS
-bool ignoreButtonFour = false;
-bool ignoreButtonFive = false;
-#endif
 
 /// Funktionen für den Standby Timer (z.B. über Pololu-Switch oder Mosfet)
 
@@ -730,6 +724,7 @@ void setup() {
     ADCSeed ^= ADC_LSB << (i % 32);
   }
   randomSeed(ADCSeed); // Zufallsgenerator initialisieren
+  
 
   // Dieser Hinweis darf nicht entfernt werden
   Serial.println(F("\n _____         _____ _____ _____ _____"));
@@ -768,18 +763,12 @@ void setup() {
     key.keyByte[i] = 0xFF;
   }
 
-  pinMode(buttonPause, INPUT_PULLUP);
-  pinMode(buttonUp, INPUT_PULLUP);
-  pinMode(buttonDown, INPUT_PULLUP);
-#ifdef FIVEBUTTONS
-  pinMode(buttonFourPin, INPUT_PULLUP);
-  pinMode(buttonFivePin, INPUT_PULLUP);
-#endif
   pinMode(shutdownPin, OUTPUT);
   digitalWrite(shutdownPin, LOW);
 
 
   // RESET --- ALLE DREI KNÖPFE BEIM STARTEN GEDRÜCKT HALTEN -> alle EINSTELLUNGEN werden gelöscht
+  /* FIXME
   if (digitalRead(buttonPause) == LOW && digitalRead(buttonUp) == LOW &&
       digitalRead(buttonDown) == LOW) {
     Serial.println(F("Reset -> EEPROM wird gelöscht"));
@@ -788,6 +777,7 @@ void setup() {
     }
     loadSettingsFromFlash();
   }
+  */
 
 
   // Start Shortcut "at Startup" - e.g. Welcome Sound
@@ -795,13 +785,98 @@ void setup() {
 }
 
 void readButtons() {
-  pauseButton.read();
-  upButton.read();
-  downButton.read();
-#ifdef FIVEBUTTONS
-  buttonFour.read();
-  buttonFive.read();
-#endif
+  int buttonsPinValue = analogRead(oneButtonPin);
+    int pressedButton = 0;
+ 
+    if (buttonsPinValue > 823)
+    {
+        // button 6 has a value of about 878
+        pressedButton = 10;
+    }
+    else if (buttonsPinValue > 725)
+    {
+        // button 5 has a value of about 768
+        pressedButton = 7;
+    }
+    else if (buttonsPinValue > 649)
+    {
+        // button 4 has a value of about 683
+        pressedButton = 4;
+    }
+    else if (buttonsPinValue > 586)
+    {
+        // button 3 has a value of about 614
+        pressedButton = 1;
+    }
+    else if (buttonsPinValue > 535)
+    {
+        // button 2 has a value of about 559
+        pressedButton = 2;
+    }
+    else if (buttonsPinValue > 492)
+    {
+        // button 1 has a value of about 512
+        pressedButton = 5;
+    }
+    else if (buttonsPinValue > 450)
+    {
+        // if no button is pressed the value is of about 473
+        pressedButton = 0;
+    }
+    else if (buttonsPinValue > 400)
+    {
+        // button 8 has a value of about 427
+        pressedButton = 8;
+    }
+    else if (buttonsPinValue > 340)
+    {
+        // button 10 has a value of about 372
+        pressedButton = 11;
+    }
+    else if (buttonsPinValue > 267)
+    {
+        // button 9 has a value of about 307
+        pressedButton = 9;
+    }
+    else if (buttonsPinValue > 178)
+    {
+        // button 8 has a value of about 228
+        pressedButton = 6;
+    }
+    else if (buttonsPinValue > 0)
+    {
+        // button 7 has a value of about 128
+        pressedButton = 3;
+    }
+    
+  pauseButton.read(pressedButton);
+  upButton.read(pressedButton);
+  downButton.read(pressedButton);
+  button1.read(pressedButton);
+  button2.read(pressedButton);
+  button3.read(pressedButton);
+  button4.read(pressedButton);
+  button5.read(pressedButton);
+  button6.read(pressedButton);
+  button7.read(pressedButton);
+  button8.read(pressedButton);
+
+
+/*
+  if (button1.wasPressed()){
+    Serial.println("wasPressed");
+  }
+  if (button1.isPressed()){
+    Serial.println("isPressed");
+  }
+    if (button1.isReleased()){
+    Serial.println("isReleased");
+  }
+  
+    if (button1.wasReleased()){
+    Serial.println("wasReleased");
+  }
+  */
 }
 
 void volumeUpButton() {
@@ -1449,9 +1524,12 @@ uint8_t voiceMenu(int numberOfOptions, int startMessage, int messageOffset,
 void resetCard() {
   mp3.playMp3FolderTrack(800);
   do {
+    /*
     pauseButton.read();
     upButton.read();
     downButton.read();
+    */
+    readButtons();
 
     if (upButton.wasReleased() || downButton.wasReleased()) {
       Serial.print(F("Abgebrochen!"));
